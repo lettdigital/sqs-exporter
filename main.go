@@ -7,9 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,39 +15,31 @@ import (
 )
 
 var (
-	listenAddress  = flag.String("listen", ":9108", "Listen address for prometheus")
-	metricsPath    = flag.String("path", "/metrics", "Path under which to expose metrics")
-	updateInterval = flag.Int64("interval", 600, "Queue update interval, seconds")
-	tagsAsLables   = flag.Bool("tags", true, "Add tags as labels to metrics")
-	queuePrefix    = flag.String("prefix", "", "Queue prefix to fetch, will be used before filter")
-	queueFilter    = flag.String("filter", ".*", "Regex to filter queue list after fetching")
+	listenAddress         = flag.String("listen", ":9108", "Listen address for prometheus")
+	metricsPath           = flag.String("path", "/metrics", "Path under which to expose metrics")
+	updateIntervalPointer = flag.Int64("interval", 600, "Queue update interval, seconds")
+	tagTeamPointer        = flag.String("tags", "", "Allows you to filter the queues based on the desired tag")
 )
 
 func main() {
 	flag.Parse()
 
-	if len(os.Getenv("PREFIX")) > 0 {
-		*queuePrefix = os.Getenv("PREFIX")
-	}
-
-	if len(os.Getenv("FILTER")) > 0 {
-		*queueFilter = os.Getenv("FILTER")
-	}
+	tagTeam := *tagTeamPointer
+	updateInterval := *updateIntervalPointer
 
 	if len(os.Getenv("INTERVAL")) > 0 {
 		if i, err := strconv.ParseInt(os.Getenv("INTERVAL"), 10, 64); err == nil {
-			*updateInterval = i
+			updateInterval = i
 		}
 	}
 
-	if strings.ToLower(os.Getenv("TAGS")) == "false" {
-		*tagsAsLables = false
+	if len(os.Getenv("TAGS")) > 0 {
+		tagTeam = os.Getenv("TAGS")
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	regex := regexp.MustCompile(*queueFilter)
-	col := newCollector(ctx, time.Second*time.Duration(*updateInterval), queuePrefix, regex, *tagsAsLables)
+	col := newCollector(ctx, time.Second*time.Duration(updateInterval), tagTeam)
 
 	r := prometheus.NewRegistry()
 	r.MustRegister(col)
