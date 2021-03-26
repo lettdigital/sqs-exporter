@@ -1,0 +1,5 @@
+version: '3.8'
+services:
+  sqs_exporter:
+    image: 868884350453.dkr.ecr.us-east-1.amazonaws.com/team-devops/sqs-exporter:${TAG}
+    build: .
