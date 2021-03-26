@@ -22,9 +22,7 @@ For more information see the [AWS SQS Documentation](https://docs.aws.amazon.com
 Flags:
 
 - interval - how often to update queue list, env INTERVAL
-- prefix - filter queue list by prefix (filtered on AWS API side), env PREFIX
-- regex - filter queues by regex (filtered in app), env REGEX
-- tags - add tags as lables, env TAGS
+- tags     - Add a tag to filter the queues of a desired team
 
 Credentials to AWS are provided in the following order:
 
@@ -43,14 +41,13 @@ The app needs sqs list and read access to the sqs policies
     "Version": "2012-10-17",
     "Statement": [
         {
-            "Sid": "VisualEditor0",
             "Effect": "Allow",
             "Action": [
                 "sqs:GetQueueAttributes",
                 "sqs:GetQueueUrl",
                 "sqs:ListDeadLetterSourceQueues",
-                "sqs:ListQueueTags"
-                "sqs:ListQueues",
+                "sqs:ListQueueTags",
+                "sqs:ListQueues"
             ],
             "Resource": "*"
         }

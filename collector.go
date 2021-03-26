@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"regexp"
 	"sync"
 	"time"
 
@@ -24,7 +23,7 @@ type collector struct {
 	totalScrapes prometheus.Counter
 }
 
-func newCollector(ctx context.Context, updateInterval time.Duration, prefix *string, regex *regexp.Regexp, tagsAsLables bool) *collector {
+func newCollector(ctx context.Context, updateInterval time.Duration, tagTeam string) *collector {
 	sess := session.Must(session.NewSession())
 
 	c := &collector{
@@ -40,7 +39,7 @@ func newCollector(ctx context.Context, updateInterval time.Duration, prefix *str
 		}),
 	}
 
-	go c.queueListUpdater(ctx, updateInterval, queuePrefix, regex, tagsAsLables)
+	go c.queueListUpdater(ctx, updateInterval, tagTeam)
 
 	return c
 }
@@ -85,14 +84,10 @@ func (c *collector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *collector) queueListUpdater(ctx context.Context, updateInverval time.Duration, prefix *string, regex *regexp.Regexp, tagsAsLables bool) {
+func (c *collector) queueListUpdater(ctx context.Context, updateInverval time.Duration, tagTeam string) {
 	log.Printf("Start queue list updater")
 
 	queueListInput := &sqs.ListQueuesInput{}
-
-	if len(*prefix) > 0 {
-		queueListInput.QueueNamePrefix = prefix
-	}
 
 	f := func() error {
 		result, err := c.client.ListQueues(queueListInput)
@@ -104,13 +99,11 @@ func (c *collector) queueListUpdater(ctx context.Context, updateInverval time.Du
 
 		for _, q := range result.QueueUrls {
 			queueName := getQueueName(*q)
-			if !regex.MatchString(queueName) {
-				continue
-			}
 
 			tmpQ := &queue{name: queueName, url: q}
 
-			if tagsAsLables {
+			if len(tagTeam) > 0 {
+
 				tagsInput := &sqs.ListQueueTagsInput{
 					QueueUrl: q,
 				}
@@ -119,9 +112,14 @@ func (c *collector) queueListUpdater(ctx context.Context, updateInverval time.Du
 				if err != nil {
 					return err
 				}
-				tmpQ.tags = tagsOutput.Tags
+
+				for _, v := range tagsOutput.Tags {
+					if *v == tagTeam {
+						tmpQ.tags = tagsOutput.Tags
+						tmpQueues = append(tmpQueues, tmpQ)
+					}
+				}
 			}
-			tmpQueues = append(tmpQueues, tmpQ)
 		}
 
 		log.Printf("Found %d queues", len(tmpQueues))
