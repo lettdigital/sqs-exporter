@@ -6,8 +6,7 @@ services:
     restart: unless-stopped
     volumes:
     - ~/.aws/credentials:/root/.aws/credentials:ro
-    environment:
-      AWS_REGION: us-east-1
-      TAGS: data_engineering
     ports:
       - "9108:9108"
+    env_file:
+      - variables.env
