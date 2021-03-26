@@ -15,27 +15,15 @@ import (
 )
 
 var (
-	listenAddress         = flag.String("listen", ":9108", "Listen address for prometheus")
-	metricsPath           = flag.String("path", "/metrics", "Path under which to expose metrics")
-	updateIntervalPointer = flag.Int64("interval", 600, "Queue update interval, seconds")
-	tagTeamPointer        = flag.String("tags", "", "Allows you to filter the queues based on the desired tag")
+	listenAddress = flag.String("listen", ":9108", "Listen address for prometheus")
+	metricsPath   = flag.String("path", "/metrics", "Path under which to expose metrics")
 )
 
 func main() {
+
 	flag.Parse()
 
-	tagTeam := *tagTeamPointer
-	updateInterval := *updateIntervalPointer
-
-	if len(os.Getenv("INTERVAL")) > 0 {
-		if i, err := strconv.ParseInt(os.Getenv("INTERVAL"), 10, 64); err == nil {
-			updateInterval = i
-		}
-	}
-
-	if len(os.Getenv("TAGS")) > 0 {
-		tagTeam = os.Getenv("TAGS")
-	}
+	tagTeam, updateInterval := getEnvs()
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -62,4 +50,23 @@ func main() {
 		cancel()
 		log.Fatal(err)
 	}
+
+}
+
+func getEnvs() (string, int64) {
+
+	tagTeam := getOrPanic("TAG_TEAM")
+	interval, _ := strconv.ParseInt(getOrPanic("INTERVAL"), 10, 64)
+
+	return tagTeam, interval
+}
+
+func getOrPanic(env string) string {
+	value := os.Getenv(env)
+
+	if value == "" {
+		log.Panicf("Error loading envioment:: %v", value)
+	}
+
+	return value
 }
